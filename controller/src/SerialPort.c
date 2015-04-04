@@ -3,6 +3,8 @@
 #include <string.h>
 #include <stdint.h>
 
+#include "SerialPort.h"
+
 #ifdef WIN32
  #include <windows.h>
 #else
@@ -11,16 +13,6 @@
  #include <termios.h>
  #include <fcntl.h>	
 #endif
-
-#include "SerialPort.h"
-
-// Print message and exit
-void ErrorExit(char *message) {
-	if(message != NULL)
-		fprintf(stderr,"%s",message);
-
-	exit(-1);
-}
 
 #ifdef WIN32
 // handle an error code from GetLastError()
@@ -66,7 +58,7 @@ HANDLE OpenSerialPort(char *portName)
     if (hSerial == INVALID_HANDLE_VALUE) {
 		fprintf(stderr,"ERROR opening port %s.\n",portName);
         PrintErrorMsg(GetLastError());
-        return hSerial;
+        return INVALID_HANDLE_VALUE;
     }
 
     // configure port
@@ -74,9 +66,10 @@ HANDLE OpenSerialPort(char *portName)
     dcbSerialParams.DCBlength=sizeof(dcbSerialParams);
     if (!GetCommState(hSerial, &dcbSerialParams)) {
         //could not get the state of the comport
+		CloseHandle(hSerial);
 		fprintf(stderr,"ERROR getting state of the COM port.\n");
 		PrintErrorMsg(GetLastError());
-        return hSerial;
+        return INVALID_HANDLE_VALUE;
     }
     // hardcoded to 115200 N81
     dcbSerialParams.BaudRate=115200;
@@ -84,9 +77,10 @@ HANDLE OpenSerialPort(char *portName)
     dcbSerialParams.StopBits=ONESTOPBIT;
     dcbSerialParams.Parity=NOPARITY;
     if(!SetCommState(hSerial, &dcbSerialParams)){
+		CloseHandle(hSerial);
 		fprintf(stderr,"ERROR configuring COM port.\n");
 		PrintErrorMsg(GetLastError());
-        return hSerial;
+        return INVALID_HANDLE_VALUE;
     }
 
     // configure timeouts
@@ -97,9 +91,10 @@ HANDLE OpenSerialPort(char *portName)
     timeouts.WriteTotalTimeoutConstant=50;
     timeouts.WriteTotalTimeoutMultiplier=10;
     if(!SetCommTimeouts(hSerial, &timeouts)){
+		CloseHandle(hSerial);
 		fprintf(stderr,"ERROR configuring timeouts.\n");
         PrintErrorMsg(GetLastError());
-        return hSerial;
+        return INVALID_HANDLE_VALUE;
     }
 
 	return hSerial;
@@ -107,7 +102,7 @@ HANDLE OpenSerialPort(char *portName)
 
 /* writes length bytes from buffer to hSerial.
  * returns when length bytes are written, cals the error handling function in case of error */
-void writeToSerialPort(HANDLE hSerial, uint8_t * buffer, int length)
+void WriteToSerialPort(HANDLE hSerial, uint8_t * buffer, int length)
 {
 
     DWORD TotalBytesWritten = 0;
@@ -131,7 +126,7 @@ void writeToSerialPort(HANDLE hSerial, uint8_t * buffer, int length)
 
 /* reads length bytes from hSerial into buffer.
  * returns when length bytes have been read, calls the error handling function in case of error */
-void readFromSerialPort(HANDLE hSerial, uint8_t * buffer, int length)
+void ReadFromSerialPort(HANDLE hSerial, uint8_t * buffer, int length)
 {
     DWORD TotalBytesRead = 0;
 	DWORD BytesRead;
@@ -152,10 +147,16 @@ void readFromSerialPort(HANDLE hSerial, uint8_t * buffer, int length)
     }
 }
 
-void closeSerialPort(HANDLE hSerial)
+void CloseSerialPort(HANDLE hSerial)
 {
     CloseHandle(hSerial);
 }
+
+int IsHandleValid(HANDLE hSerial) {
+	return (hSerial != INVALID_HANDLE_VALUE);
+}
+
+HANDLE GetInvalidHandle() { return INVALID_HANDLE_VALUE; }
 
 #else // defined(WIN32)
 //Handle an error code obtained from errno
@@ -175,13 +176,16 @@ int OpenSerialPort(char *portName) {
 	if(serialfd < 0) {
 		fprintf(stderr,"ERROR oprning serial port %s.\n",portName);
 		PrintErrorMsg(errno);
+		return -1;
 	}
 
 	/* Configure Serial Port */
 	memset(&serialport,0,sizeof(struct termios));
 	if(tcgetattr(serialfd,&serialport) == -1) {
+		close(serialfd);
 		fprintf(stderr,"ERROR getting attributes.\n");
 		PrintErrorMsg(errno);
+		return -1;
 	}
 	
 	cfsetospeed(&serialport,B115200);
@@ -205,8 +209,10 @@ int OpenSerialPort(char *portName) {
 	tcflush(serialfd,TCIFLUSH);
 
 	if(tcsetattr(serialfd,TCSANOW,&serialport) == -1) {
+		close(serialfd);
 		fprintf(stderr,"ERROR setting attributes.\n");
 		PrintErrorMsg(errno);
+		return -1;
 	}
 
 	return serialfd;
@@ -214,7 +220,7 @@ int OpenSerialPort(char *portName) {
 
 /* write length bytes from buffer to serialfd.
  * return when length bytes are written, call error handler function in case of error */
-void writeToSerialPort(int serialfd, uint8_t *buffer, int length) {
+void WriteToSerialPort(int serialfd, uint8_t *buffer, int length) {
 
 	int totalBytesWritten = 0;
 	int bytesWritten;
@@ -238,7 +244,7 @@ void writeToSerialPort(int serialfd, uint8_t *buffer, int length) {
 
 /* read length bytes from serialfd into buffer.
  * return when length bytes are read, call error handler function in case of error */
-void readFromSerialPort(int serialfd, uint8_t *buffer, int length) {
+void ReadFromSerialPort(int serialfd, uint8_t *buffer, int length) {
 
 	int totalBytesRead = 0;
 	int bytesRead;
@@ -261,9 +267,15 @@ void readFromSerialPort(int serialfd, uint8_t *buffer, int length) {
 }
 
 /* close the serial port's file descriptor */
-void closeSerialPort(int serialfd) {
+void CloseSerialPort(int serialfd) {
 	close(serialfd);
 }
+
+int IsHandleValid(int serialfd) {
+	return (serialfd > 0);
+}
+
+int GetInvalidHandle() { return -1; }
 
 #endif
 
