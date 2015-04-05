@@ -9,10 +9,14 @@ class HapticSleeveInterface {
 	public:
 		HapticSleeveInterface();
 		~HapticSleeveInterface();
+		void Connect(const char *portName);
+		void Disconnect();
 
 	private:
 		HapticSleeveModel *model;
 };
+
+extern int verbosity;
 
 #endif
 

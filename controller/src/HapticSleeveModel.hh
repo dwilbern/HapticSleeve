@@ -15,9 +15,8 @@ class HapticSleeveModel {
 	public:
 		HapticSleeveModel();
 		~HapticSleeveModel();
-		void SetVerbosity(int v);
-		bool ConnectToSleeve(char *portName);
-		void DisconnectFromSleeve();
+		bool ConnectToSleeve(const char *portName);
+		bool DisconnectFromSleeve();
 		bool IsSleeveConnected();
 
 	private:
@@ -25,7 +24,8 @@ class HapticSleeveModel {
 
 	private:
 		SerialPortHandle hSerial;
-		int verbosity;
 };
+
+extern int verbosity;
 
 #endif

@@ -1,6 +1,7 @@
 
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <cstdio>
 
 #include "HapticSleeveConsoleApp.hh"
@@ -11,19 +12,45 @@ int main(int argc, char *argv[]) {
 	HapticSleeveInterface *sleeve = new HapticSleeveInterface();
 	std::string s;
 
+#ifdef DEBUG
+	verbosity = 3;
+#else
+	verbosity = 2;
+#endif
+
+	if(verbosity >= 1)
+		printf("Haptic Sleeve CLI Controller App by Daniel Wilbern, dwilbern@nmu.edu\n");	
+
 	while(true) {
 		std::cout << "? ";
 		getline(std::cin,s);
+		std::istringstream iss(s);
 
-		if(s == "") continue;
-		else if (s == "exit" || s == "quit") break;
-		else if(s == "help") PrintHelpDialog();
-		else {
-			std::cout << "Invalid command " << s << '.' << std::endl;	
-			PrintHelpDialog();
+		while(iss) {
+			iss >> s;
+
+			if(s == "")
+				break;
+			else if(s == "exit" || s == "quit" || s == "q")
+				goto end;
+			else if(s == "help" || s == "h")
+				PrintHelpDialog();
+			else if(s == "verbosity" || s == "v") {
+				iss >> verbosity;
+			} else if(s == "connect" || s == "c") {
+				iss >> s;
+				sleeve->Connect(s.c_str());
+			} else if(s == "disconnect" || s == "d")
+				sleeve->Disconnect();
+			else {
+				std::cout << "Invalid command " << s << '.' << std::endl;	
+				PrintHelpDialog();
+			}
+			s = "";
 		}
 	}
 
+end:
 	delete sleeve;
 	return 0;
 }
@@ -32,9 +59,10 @@ void PrintHelpDialog() {
 
 	printf("Haptic Sleeve CLI Controller App by Daniel Wilbern, dwilbern@nmu.edu\n");	
 	printf("Commands:\n");
-	printf("\thelp: print this dialog\n");
-	printf("\tconnect <port name>: open a connection to the haptic sleeve at the given serial port location (e.g. \"COM3\")\n");
-	printf("\tdisconnect: close the serial connection to the haptic sleeve\n");
-	printf("\texit: close this program\n");
+	printf("\t(h)elp: print this dialog\n");
+	printf("\t(c)onnect <port name>: open a connection to the haptic sleeve at the given serial port location (e.g. \"COM3\")\n");
+	printf("\t(d)isconnect: close the serial connection to the haptic sleeve\n");
+	printf("\t(v)erbosity <level>: change the verbosity of output\n");
+	printf("\texit, (q)uit: close this program\n");
 }
 

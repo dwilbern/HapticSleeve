@@ -6,7 +6,6 @@
 
 HapticSleeveModel::HapticSleeveModel() {
 	hSerial.handle = GetInvalidHandle();
-	verbosity = 2;
 }
 
 HapticSleeveModel::~HapticSleeveModel() {
@@ -14,28 +13,26 @@ HapticSleeveModel::~HapticSleeveModel() {
 		CloseSerialPort(hSerial.handle);
 }
 
-// 0 means don't print any error messages, status information, or debugging info.
-// 1 means print error messages only.
-// 2 means print error messages and status information only.
-// 3 means print error messages, status information, and debugging information.
-void HapticSleeveModel::SetVerbosity(int v) {
-	verbosity = v;
-}
-
 // Given the name of the serial port to open (e.g. "COM5),
 // Open a serial connection and do any necessary initialization.
 // Return true on success, false on failure.
-bool HapticSleeveModel::ConnectToSleeve(char *portName) {
+bool HapticSleeveModel::ConnectToSleeve(const char *portName) {
 	hSerial.handle = OpenSerialPort(portName);
-	return IsHandleValid(hSerial.handle);
+	if(IsHandleValid(hSerial.handle))
+		return true;
+	//	return testConnectionWithEcho();
+	else
+		return false;
 }
 
-// Close the serial port connection.
-void HapticSleeveModel::DisconnectFromSleeve() {
+// Close the serial port connection.  Returns true if a the port was really closed.
+bool HapticSleeveModel::DisconnectFromSleeve() {
 	if(IsHandleValid(hSerial.handle)) {
 		CloseSerialPort(hSerial.handle);
 		hSerial.handle = GetInvalidHandle();
+		return true;
 	}
+	return false;
 }
 
 // Return true if we have a working connection to the Arduino.
@@ -57,9 +54,8 @@ bool HapticSleeveModel::testConnectionWithEcho() {
 	int bufsz = strlen(buf);
 
 	WriteToSerialPort(hSerial.handle, (uint8_t *)buf, bufsz);
-	memset(buf,0,bufsz);
-	ReadFromSerialPort(hSerial.handle, (uint8_t *)buf, bufsz-2);
+	ReadFromSerialPort(hSerial.handle, (uint8_t *)buf, bufsz-1);
 
-	return (strcmp(buf,"testing") == 0);
+	return (strcmp(buf," testing") == 0);
 }
 
