@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
 	if(verbosity >= 1)
 		printf("Haptic Sleeve CLI Controller App by Daniel Wilbern, dwilbern@nmu.edu\n");	
 
-	while(true) {
+	while(std::cin) {
 		std::cout << "? ";
 		getline(std::cin,s);
 		std::istringstream iss(s);
@@ -39,9 +39,16 @@ int main(int argc, char *argv[]) {
 				iss >> verbosity;
 			} else if(s == "connect" || s == "c") {
 				iss >> s;
+			//	sleeve->Connect("/dev/ttyACM0");
 				sleeve->Connect(s.c_str());
 			} else if(s == "disconnect" || s == "d")
 				sleeve->Disconnect();
+			else if(s == "calibrate" || s == "l")
+				sleeve->Calibrate();
+			else if(s == "echo" || s == "e") {
+				iss >> s;
+				sleeve->Echo(s.c_str());
+			}
 			else {
 				std::cout << "Invalid command " << s << '.' << std::endl;	
 				PrintHelpDialog();
@@ -62,7 +69,9 @@ void PrintHelpDialog() {
 	printf("\t(h)elp: print this dialog\n");
 	printf("\t(c)onnect <port name>: open a connection to the haptic sleeve at the given serial port location (e.g. \"COM3\")\n");
 	printf("\t(d)isconnect: close the serial connection to the haptic sleeve\n");
+	printf("\tca(l)ibrate: calibrate the sleeve's maximum and minimum feedback values\n");
 	printf("\t(v)erbosity <level>: change the verbosity of output\n");
+	printf("\t(e)cho <string>: test the serial connection with an echo\n");
 	printf("\texit, (q)uit: close this program\n");
 }
 

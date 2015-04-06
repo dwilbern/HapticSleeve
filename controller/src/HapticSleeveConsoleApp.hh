@@ -9,6 +9,7 @@ void PrintHelpDialog();
 // 1 means print error messages only
 // 2 means print error messages and status information only
 // 3 means print error messages, status information, and debugging information
+// 4 includes spammy debugging messages as well
 int verbosity;
 
 #endif

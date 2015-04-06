@@ -11,6 +11,8 @@ class HapticSleeveInterface {
 		~HapticSleeveInterface();
 		void Connect(const char *portName);
 		void Disconnect();
+		void Calibrate();
+		void Echo(const char *str);
 
 	private:
 		HapticSleeveModel *model;

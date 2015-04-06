@@ -1,5 +1,13 @@
 
+#include <cstdio>
 #include <cstring>
+#include <cstdlib>
+
+#ifdef WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
 
 #include "HapticSleeveModel.hh"
 #include "SerialPort.h"
@@ -13,14 +21,13 @@ HapticSleeveModel::~HapticSleeveModel() {
 		CloseSerialPort(hSerial.handle);
 }
 
-// Given the name of the serial port to open (e.g. "COM5),
+// Given the name of the serial port to open (e.g. "COM5"),
 // Open a serial connection and do any necessary initialization.
 // Return true on success, false on failure.
 bool HapticSleeveModel::ConnectToSleeve(const char *portName) {
 	hSerial.handle = OpenSerialPort(portName);
 	if(IsHandleValid(hSerial.handle))
-		return true;
-	//	return testConnectionWithEcho();
+		return testConnectionWithEcho();
 	else
 		return false;
 }
@@ -32,6 +39,54 @@ bool HapticSleeveModel::DisconnectFromSleeve() {
 		hSerial.handle = GetInvalidHandle();
 		return true;
 	}
+	return false;
+}
+
+// Run the sleeve's feedback calibration routine.  Return true if the operation was
+// successful.
+bool HapticSleeveModel::CalibrateSleeve() {
+	int timeElapsed = 0;
+	char *s = "c ";
+	char *buf = (char *)malloc(sizeof(s)+4);
+	strcpy(buf,s);
+
+	if(IsHandleValid(hSerial.handle)) {
+		WriteToSerialPort(hSerial.handle, buf, 1);
+		do {
+			usleep(500000); // 0.5 sec
+			timeElapsed += 500000;
+			if(verbosity >= 1) {
+				printf(". ");
+				fflush(stdout);
+			}
+		} while(ReadFromSerialPort(hSerial.handle, buf, 4) == 0 && timeElapsed < 10000000); // 10 sec
+
+		if(verbosity >= 1)
+			printf("\n");
+
+		if(timeElapsed >= 10000000) {
+			if(verbosity >= 1)
+			fprintf(stderr,"Calibration timed out.\n");
+			goto retFalse;
+		}
+
+		if(strcmp(buf,"done") == 0)
+			goto retTrue;
+		else {
+			if(verbosity >= 1)
+				fprintf(stderr,"Recieved unexpected reply.\n");
+			goto retFalse;
+		}
+	}
+	if(verbosity >= 1)
+			fprintf(stderr,"Not connected to sleeve.\n");
+	goto retFalse;
+
+retTrue:
+	free(buf);
+	return true;
+retFalse:
+	free(buf);
 	return false;
 }
 
@@ -47,15 +102,47 @@ bool HapticSleeveModel::IsSleeveConnected() {
 	return false;
 }
 
-// Send an echo request to the arduino.  Return true if we get a valid reply.
+// Test the connection is functioning properly by sending an echo request and verifying
+// we got the correct answer.
 bool HapticSleeveModel::testConnectionWithEcho() {
 
-	char *buf = "e testing";
-	int bufsz = strlen(buf);
+	char *testStr = "testing123";
+	char *buf = (char *)malloc(strlen(testStr));
+	strcpy(buf,testStr);
 
-	WriteToSerialPort(hSerial.handle, (uint8_t *)buf, bufsz);
-	ReadFromSerialPort(hSerial.handle, (uint8_t *)buf, bufsz-1);
+	EchoFromSleeve(buf, strlen(buf));
 
-	return (strcmp(buf," testing") == 0);
+	if(verbosity >= 3)
+		printf("Echo test: sent %s and got back %s.\n", testStr,buf);
+
+	int result = strcmp(buf,testStr);
+	free(buf);
+	return (result == 0);
+}
+
+// Request the Arduino echo the contents of buf and copy its reply into buf.
+void HapticSleeveModel::EchoFromSleeve(char *buf, int bufsz) {
+
+	int microsElapsed = 0;
+	char *buf2 = (char *)malloc(bufsz+2);
+	buf2[0] = 'e';
+	buf2[1] = ' ';
+	strcpy(buf2+2,buf);
+	memset(buf,0,bufsz);
+
+	if(IsHandleValid(hSerial.handle)) {
+		WriteToSerialPort(hSerial.handle, buf2, bufsz+2);
+		while(microsElapsed < 1000000) { // 1 s
+			usleep(10000); // 10 ms
+			microsElapsed += 10000;
+			if(ReadFromSerialPort(hSerial.handle, buf, bufsz) != 0)
+				break;
+		}
+
+	} else
+		if(verbosity >= 1)
+			fprintf(stderr,"Not doing an echo request.  The port is not open.\n");
+
+	free(buf2);
 }
 

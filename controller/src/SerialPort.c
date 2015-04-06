@@ -11,7 +11,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <termios.h>
-#include <fcntl.h>	
+#include <fcntl.h>
 #endif
 
 #ifdef WIN32
@@ -183,7 +183,7 @@ int OpenSerialPort(const char *portName) {
 
 	if(serialfd < 0) {
 		if(verbosity >= 1)
-			fprintf(stderr,"ERROR oprning serial port %s. ",portName);
+			fprintf(stderr,"ERROR opening serial port %s. ",portName);
 		PrintErrorMsg(errno);
 		return -1;
 	}
@@ -231,52 +231,64 @@ int OpenSerialPort(const char *portName) {
 
 /* write length bytes from buffer to serialfd.
  * return when length bytes are written, call error handler function in case of error */
-void WriteToSerialPort(int serialfd, uint8_t *buffer, int length) {
+void WriteToSerialPort(int serialfd, void *buffer, int length) {
 
 	int totalBytesWritten = 0;
 	int bytesWritten;
 
+	if(verbosity >= 3)
+		printf("Writing \"%s\"\n", buffer);
+
 	while(totalBytesWritten < length) {
-		do {
-			bytesWritten = write(serialfd,
-					buffer + totalBytesWritten,
-					length - totalBytesWritten);
+		bytesWritten = write(serialfd,
+				buffer + totalBytesWritten,
+				length - totalBytesWritten);
 
-			if(bytesWritten < 0 && errno != EINTR) { /* do not abort the write on an interrupt, try again instead */
-				if(verbosity >= 1)
-					fprintf(stderr,"ERROR: write error. ");
-				PrintErrorMsg(errno);
-			}
-
-		} while(bytesWritten < 0);
+		if(bytesWritten < 0 && errno != EINTR) { /* do not abort the write on an interrupt, try again instead */
+			if(verbosity >= 1)
+				fprintf(stderr,"ERROR: write error. ");
+			PrintErrorMsg(errno);
+		}
 
 		totalBytesWritten += bytesWritten;
 	}
 }
 
 /* read length bytes from serialfd into buffer.
- * return when length bytes are read, call error handler function in case of error */
-void ReadFromSerialPort(int serialfd, uint8_t *buffer, int length) {
+ * Returns -1 on error, 0 if nothing was read, and the number of bytes read if the read was
+ * successful. */
+int ReadFromSerialPort(int serialfd, void *buffer, int length) {
 
 	int totalBytesRead = 0;
 	int bytesRead;
 
 	while(totalBytesRead < length) {
-		do {
-			bytesRead = read(serialfd,
-					buffer + totalBytesRead,
-					length - totalBytesRead);
+		bytesRead = read(serialfd, buffer + totalBytesRead, length - totalBytesRead);
 
-			if(bytesRead < 0 && errno != EINTR) { /* do not abort the read on an interrupt, try again instead */
-				if(verbosity >= 1)
-					fprintf(stderr,"ERROR: read error. ");
-				PrintErrorMsg(errno);
+		if(verbosity >= 4)
+			printf("Read %d bytes.\n", bytesRead);
+
+		if(bytesRead < 0) {
+			if(errno == EAGAIN) {
+				if(verbosity >= 4)
+					printf("try again.\n");
+				return 0;
 			}
+			if(errno == EINTR)
+				continue;
 
-		} while(bytesRead < 0);
+			if(verbosity >= 1)
+				fprintf(stderr,"ERROR: read error.");
+			PrintErrorMsg(errno);
+			return -1;
+		}
 
 		totalBytesRead += bytesRead;
 	}
+
+	if(verbosity >= 3)
+		printf("Read \"%s\"\n",buffer);
+	return totalBytesRead;
 }
 
 /* close the serial port's file descriptor */

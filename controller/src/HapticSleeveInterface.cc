@@ -1,5 +1,7 @@
 
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #include "HapticSleeveModel.hh"
 #include "HapticSleeveInterface.hh"
@@ -34,5 +36,33 @@ void HapticSleeveInterface::Disconnect() {
 	} else
 		if(verbosity >= 2)
 			printf("Disconnected from sleeve.\n");
+}
+
+void HapticSleeveInterface::Calibrate() {
+
+	bool success = model->CalibrateSleeve();
+
+	if(!success) {
+		if(verbosity >= 1)
+			fprintf(stderr,"Feedback calibration unsuccessful.\n");
+	} else
+		if(verbosity >= 2)
+			printf("Feedback calibration successful.\n");
+}
+
+void HapticSleeveInterface::Echo(const char *str) {
+
+	int strLen = strlen(str);
+	char *buf = (char *)malloc(strLen);
+	strcpy(buf,str);
+
+	model->EchoFromSleeve(buf,strLen);
+	if(buf[0] == '\0') {
+		if(verbosity >= 1)
+			printf("Arduino did not reply.\n");
+	} else
+		printf("Arduino's reply: %s\n",buf);
+
+	free(buf);
 }
 
