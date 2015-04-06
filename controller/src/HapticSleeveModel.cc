@@ -14,6 +14,7 @@
 
 HapticSleeveModel::HapticSleeveModel() {
 	hSerial.handle = GetInvalidHandle();
+	calibrated = false;
 }
 
 HapticSleeveModel::~HapticSleeveModel() {
@@ -34,6 +35,7 @@ bool HapticSleeveModel::ConnectToSleeve(const char *portName) {
 
 // Close the serial port connection.  Returns true if a the port was really closed.
 bool HapticSleeveModel::DisconnectFromSleeve() {
+	calibrated = false;
 	if(IsHandleValid(hSerial.handle)) {
 		CloseSerialPort(hSerial.handle);
 		hSerial.handle = GetInvalidHandle();
@@ -66,7 +68,7 @@ bool HapticSleeveModel::CalibrateSleeve() {
 
 		if(timeElapsed >= 10000000) {
 			if(verbosity >= 1)
-			fprintf(stderr,"Calibration timed out.\n");
+				fprintf(stderr,"Calibration timed out.\n");
 			goto retFalse;
 		}
 
@@ -77,17 +79,34 @@ bool HapticSleeveModel::CalibrateSleeve() {
 				fprintf(stderr,"Recieved unexpected reply.\n");
 			goto retFalse;
 		}
-	}
-	if(verbosity >= 1)
+	} else
+		if(verbosity >= 1)
 			fprintf(stderr,"Not connected to sleeve.\n");
 	goto retFalse;
 
 retTrue:
 	free(buf);
+	calibrated = true;
 	return true;
 retFalse:
 	free(buf);
 	return false;
+}
+
+bool HapticSleeveModel::Run(int n) {
+
+	if(!calibrated) {
+		if(verbosity >= 1)
+			fprintf(stderr,"Not running.  Feedback calibration routine has not been run.\n");
+		return false;
+	}
+	if(n <= 0) {
+		if(verbosity >= 1)
+			fprintf(stderr,"Not running.  Please enter a positive integer.\n");
+		return false;
+	}
+
+	return true;
 }
 
 // Return true if we have a working connection to the Arduino.
@@ -144,5 +163,32 @@ void HapticSleeveModel::EchoFromSleeve(char *buf, int bufsz) {
 			fprintf(stderr,"Not doing an echo request.  The port is not open.\n");
 
 	free(buf2);
+}
+
+// Ask the Arduino for the current position of the motor.  Return -1 if no reply.
+int HapticSleeveModel::getMotorPos() {
+
+	int microsElapsed = 0;
+	char buf[3];
+	buf[0] = 'g';
+	buf[1] = ' ';
+
+	if(IsHandleValid(hSerial.handle)) {
+		WriteToSerialPort(hSerial.handle, buf, 2);
+		while(microsElapsed < 100000) { // 100 ms
+			if(ReadFromSerialPort(hSerial.handle, buf, 3) != 0)
+				break;
+			usleep(10000); // 10 ms
+			microsElapsed += 10000;
+		}
+		if(microsElapsed >= 100000) {
+			if(verbosity >= 1)
+				fprintf(stderr,"Getting position timed out.\n");
+			return -1;
+		}
+
+		return atoi(buf);
+	} else
+		return -1;
 }
 

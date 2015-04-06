@@ -11,6 +11,7 @@ int main(int argc, char *argv[]) {
 
 	HapticSleeveInterface *sleeve = new HapticSleeveInterface();
 	std::string s;
+	int n = 0;
 
 #ifdef DEBUG
 	verbosity = 3;
@@ -45,7 +46,11 @@ int main(int argc, char *argv[]) {
 				sleeve->Disconnect();
 			else if(s == "calibrate" || s == "l")
 				sleeve->Calibrate();
-			else if(s == "echo" || s == "e") {
+			else if(s == "run" || s == "r") {
+				iss >> n;
+				sleeve->RunForNumberOfTimes(n);
+				n = 0;
+			} else if(s == "echo" || s == "e") {
 				iss >> s;
 				sleeve->Echo(s.c_str());
 			}
@@ -70,6 +75,7 @@ void PrintHelpDialog() {
 	printf("\t(c)onnect <port name>: open a connection to the haptic sleeve at the given serial port location (e.g. \"COM3\")\n");
 	printf("\t(d)isconnect: close the serial connection to the haptic sleeve\n");
 	printf("\tca(l)ibrate: calibrate the sleeve's maximum and minimum feedback values\n");
+	printf("\t(r)un <number>: if the serial port connection is open and the calibration done, then run the sleeve <number> times\n");
 	printf("\t(v)erbosity <level>: change the verbosity of output\n");
 	printf("\t(e)cho <string>: test the serial connection with an echo\n");
 	printf("\texit, (q)uit: close this program\n");

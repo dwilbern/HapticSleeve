@@ -18,14 +18,17 @@ class HapticSleeveModel {
 		bool ConnectToSleeve(const char *portName);
 		bool DisconnectFromSleeve();
 		bool CalibrateSleeve();
+		bool Run(int n);
 		bool IsSleeveConnected();
 		void EchoFromSleeve(char *buf, int bufsz);
 
 	private:
 		bool testConnectionWithEcho();
+		int getMotorPos();
 
 	private:
 		SerialPortHandle hSerial;
+		bool calibrated;
 };
 
 extern int verbosity;

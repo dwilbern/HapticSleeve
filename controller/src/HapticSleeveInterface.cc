@@ -50,6 +50,18 @@ void HapticSleeveInterface::Calibrate() {
 			printf("Feedback calibration successful.\n");
 }
 
+void HapticSleeveInterface::RunForNumberOfTimes(int n) {
+
+	bool success = model->Run(n);
+
+	if(!success) {
+		if(verbosity >= 1)
+			fprintf(stderr,"Attempted to run %d times and was unsuccessful.\n", n);
+	} else
+		if(verbosity >= 2)
+			fprintf(stderr,"Successfully ran %d times.\n", n);
+}
+
 void HapticSleeveInterface::Echo(const char *str) {
 
 	int strLen = strlen(str);

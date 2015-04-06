@@ -12,6 +12,7 @@ class HapticSleeveInterface {
 		void Connect(const char *portName);
 		void Disconnect();
 		void Calibrate();
+		void RunForNumberOfTimes(int n);
 		void Echo(const char *str);
 
 	private:
