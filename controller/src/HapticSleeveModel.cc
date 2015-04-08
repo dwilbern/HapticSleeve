@@ -15,6 +15,7 @@
 HapticSleeveModel::HapticSleeveModel() {
 	hSerial.handle = GetInvalidHandle();
 	calibrated = false;
+	currentPos = 0;
 }
 
 HapticSleeveModel::~HapticSleeveModel() {
@@ -95,6 +96,11 @@ retFalse:
 
 bool HapticSleeveModel::Run(int n) {
 
+	if(!IsHandleValid(hSerial.handle)) {
+		if(verbosity >= 1)
+			fprintf(stderr,"Not running.  The serial port is not open.\n");
+		return false;
+	}
 	if(!calibrated) {
 		if(verbosity >= 1)
 			fprintf(stderr,"Not running.  Feedback calibration routine has not been run.\n");
@@ -104,6 +110,39 @@ bool HapticSleeveModel::Run(int n) {
 		if(verbosity >= 1)
 			fprintf(stderr,"Not running.  Please enter a positive integer.\n");
 		return false;
+	}
+
+	int i;
+	for(i = 1; i <= n; i++) {
+		if(isMotorAtFront()) {
+			moveToBack();
+			if(!isMotorAtBack()) {
+				if(verbosity >= 1)
+					fprintf(stderr,"Failed to move to back on run #%d.\n", i);
+				return false;
+			} else
+				if(verbosity >= 2)
+					printf("Successfully completed run #%d, front to back.\n", i);
+
+		} else if(isMotorAtBack()) {
+			moveToFront();
+			if(!isMotorAtFront()) {
+				if(verbosity >= 1)
+					fprintf(stderr,"Failed to move to front on run #%d.\n", i);
+				return false;
+			} else
+				if(verbosity >= 2)
+					printf("Successfully completed run #%d, back to front.\n", i);
+
+		} else {
+			moveToFront();
+			if(!isMotorAtFront()) {
+				if(verbosity >= 1)
+					fprintf(stderr,"Run #%d: Tried to move from middle to front and failed.", i);
+			} else
+				if(verbosity >= 2)
+					printf("Successfully completed run #%d.  Started in the middle and moved to front.\n", i);
+		}
 	}
 
 	return true;
@@ -165,7 +204,7 @@ void HapticSleeveModel::EchoFromSleeve(char *buf, int bufsz) {
 	free(buf2);
 }
 
-// Ask the Arduino for the current position of the motor.  Return -1 if no reply.
+// Ask the Arduino for the current position of the motor.  Return -100 if no reply.
 int HapticSleeveModel::getMotorPos() {
 
 	int microsElapsed = 0;
@@ -187,8 +226,34 @@ int HapticSleeveModel::getMotorPos() {
 			return -1;
 		}
 
-		return atoi(buf);
-	} else
-		return -1;
+		currentPos = atoi(buf);
+		return currentPos;
+	} else {
+		if(verbosity >= 1)
+			fprintf(stderr,"Not getting position.  The port is not open.\n");
+		return -100;
+	}
+}
+
+bool HapticSleeveModel::isMotorAtFront() {
+
+	if((currentPos - FRONTPOS) <= DEGREESTOLERANCE)
+		return true;
+	else
+		return false;
+}
+
+bool HapticSleeveModel::isMotorAtBack() {
+
+	if((currentPos - BACKPOS) <= DEGREESTOLERANCE)
+		return true;
+	else
+		return false;
+}
+
+void HapticSleeveModel::moveToFront() {
+}
+
+void HapticSleeveModel::moveToBack() {
 }
 
