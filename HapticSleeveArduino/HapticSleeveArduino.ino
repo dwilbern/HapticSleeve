@@ -41,7 +41,8 @@ void handleSerialCommunication() {
     switch(incomingByte) {
 
     case SETPOS:
-      targetPos = Serial.parseInt();
+      //targetPos = Serial.parseInt();
+      myservo.write(Serial.parseInt());
       break;
 
     case GETPOS:
@@ -61,6 +62,7 @@ void handleSerialCommunication() {
       break;
     }
   }
+  
 }
 
 void calibrateServoFeedback() {

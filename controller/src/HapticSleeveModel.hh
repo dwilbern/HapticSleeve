@@ -2,9 +2,9 @@
 #ifndef __Haptic_Sleeve_Model_H_
 #define __Haptic_Sleeve_Model_H_
 
-#define FRONTPOS 20
-#define BACKPOS 160
-#define DEGREESTOLERANCE 5
+#define FRONTPOS 0
+#define BACKPOS 120
+#define DEGREESTOLERANCE 20
 
 typedef struct serialPortHandle {
 #ifdef WIN32
@@ -28,6 +28,7 @@ class HapticSleeveModel {
 
 	private:
 		bool testConnectionWithEcho();
+		void setMotorPos(int pos);
 		int getMotorPos();
 		bool isMotorAtFront();
 		bool isMotorAtBack();

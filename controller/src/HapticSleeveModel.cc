@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
+#include <cmath>
 
 #ifdef WIN32
 #include <windows.h>
@@ -122,7 +123,7 @@ bool HapticSleeveModel::Run(int n) {
 				return false;
 			} else
 				if(verbosity >= 2)
-					printf("Successfully completed run #%d, front to back.\n", i);
+					printf("Run #%d done: front to back.", i);
 
 		} else if(isMotorAtBack()) {
 			moveToFront();
@@ -132,7 +133,7 @@ bool HapticSleeveModel::Run(int n) {
 				return false;
 			} else
 				if(verbosity >= 2)
-					printf("Successfully completed run #%d, back to front.\n", i);
+					printf("Run #%d done: back to front.\n", i);
 
 		} else {
 			moveToFront();
@@ -141,7 +142,7 @@ bool HapticSleeveModel::Run(int n) {
 					fprintf(stderr,"Run #%d: Tried to move from middle to front and failed.", i);
 			} else
 				if(verbosity >= 2)
-					printf("Successfully completed run #%d.  Started in the middle and moved to front.\n", i);
+					printf("Run #%d done: middle to front.\n", i);
 		}
 	}
 
@@ -204,6 +205,22 @@ void HapticSleeveModel::EchoFromSleeve(char *buf, int bufsz) {
 	free(buf2);
 }
 
+// Ask the Arduino to set the servo motor's position to pos.
+void HapticSleeveModel::setMotorPos(int pos) {
+
+	char buf[6];
+	buf[0] = 'p';
+	buf[1] = ' ';
+	sprintf(buf+2,"%03d", pos);
+
+	if(IsHandleValid(hSerial.handle))
+		WriteToSerialPort(hSerial.handle, buf, 6);
+	else
+		if(verbosity >= 1)
+			fprintf(stderr,"Failed to set the motor's position to %d.", pos);
+	
+}
+
 // Ask the Arduino for the current position of the motor.  Return -100 if no reply.
 int HapticSleeveModel::getMotorPos() {
 
@@ -236,24 +253,28 @@ int HapticSleeveModel::getMotorPos() {
 }
 
 bool HapticSleeveModel::isMotorAtFront() {
-
-	if((currentPos - FRONTPOS) <= DEGREESTOLERANCE)
-		return true;
-	else
-		return false;
+	getMotorPos();
+	return abs(currentPos - FRONTPOS) <= DEGREESTOLERANCE;
 }
 
 bool HapticSleeveModel::isMotorAtBack() {
-
-	if((currentPos - BACKPOS) <= DEGREESTOLERANCE)
-		return true;
-	else
-		return false;
+	getMotorPos();
+	return abs(currentPos - BACKPOS) <= DEGREESTOLERANCE;
 }
 
 void HapticSleeveModel::moveToFront() {
+
+	setMotorPos(FRONTPOS);
+
+	while(!isMotorAtFront())
+		usleep(100000); // 100 ms
 }
 
 void HapticSleeveModel::moveToBack() {
+	
+	setMotorPos(BACKPOS);
+
+	while(!isMotorAtBack())
+		usleep(100000); // 100 ms
 }
 
