@@ -16,13 +16,12 @@ int maxDegrees = 170;
 int minFeedback, maxFeedback;
 
 int targetPos = 0;
-int degreesTolerance = 10;
+int degreesTolerance = 20;
 
 void setup() {
 
   myservo.attach(servoPin);
   Serial.begin(115200); // 115200 baud
-  myservo.write(0);
 }
 
 void loop() {

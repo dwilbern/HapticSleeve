@@ -2,6 +2,10 @@
 #ifndef __Haptic_Sleeve_Model_H_
 #define __Haptic_Sleeve_Model_H_
 
+#ifdef WIN32
+#include <windows.h>
+#endif
+
 #define FRONTPOS 0
 #define BACKPOS 120
 #define DEGREESTOLERANCE 20

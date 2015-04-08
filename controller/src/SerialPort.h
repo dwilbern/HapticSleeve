@@ -1,13 +1,15 @@
 #ifndef _SERIALPORT_H_
 #define _SERIALPORT_H_
 
-#include <stdint.h>
+#ifdef WIN32
+#include <windows.h>
+#endif
 
 #ifdef WIN32
 void PrintErrorMsg(DWORD err);
 HANDLE OpenSerialPort(const char *portName);
-void WriteToSerialPort(HANDLE hSerial, uint8_t *buffer, int length);
-int ReadFromSerialPort(HANDLE hSerial, uint8_t *buffer, int length);
+void WriteToSerialPort(HANDLE hSerial, void *buffer, int length);
+int ReadFromSerialPort(HANDLE hSerial, void *buffer, int length);
 void CloseSerialPort(HANDLE hSerial);
 int IsHandleValid(HANDLE hSerial);
 HANDLE GetInvalidHandle();

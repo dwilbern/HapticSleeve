@@ -107,7 +107,7 @@ HANDLE OpenSerialPort(const char *portName)
 
 /* writes length bytes from buffer to hSerial.
  * returns when length bytes are written, cals the error handling function in case of error */
-void WriteToSerialPort(HANDLE hSerial, uint8_t * buffer, int length)
+void WriteToSerialPort(HANDLE hSerial, void * buffer, int length)
 {
 
 	DWORD TotalBytesWritten = 0;
@@ -132,13 +132,13 @@ void WriteToSerialPort(HANDLE hSerial, uint8_t * buffer, int length)
 
 /* reads length bytes from hSerial into buffer.
  * returns when length bytes have been read, calls the error handling function in case of error */
-void ReadFromSerialPort(HANDLE hSerial, uint8_t * buffer, int length)
+int ReadFromSerialPort(HANDLE hSerial, void * buffer, int length)
 {
 	DWORD TotalBytesRead = 0;
 	DWORD BytesRead;
 	BOOL retValue;
 
-	while(TotalBytesWritten < length) {
+	while(TotalBytesRead < length) {
 		retValue = ReadFile(hSerial,
 				buffer + TotalBytesRead,
 				length - TotalBytesRead,
@@ -148,10 +148,21 @@ void ReadFromSerialPort(HANDLE hSerial, uint8_t * buffer, int length)
 			if(verbosity >= 1)
 				fprintf(stderr,"ERROR reading. ");
 			PrintErrorMsg(GetLastError());
+			return -1;
 		}
+		
+		if(verbosity >= 4)
+			printf("Read %d bytes.\n", BytesRead);
 
+		if(BytesRead == 0)
+			return 0;
+		
 		TotalBytesRead += BytesRead;
 	}
+	
+	if(verbosity >= 3)
+		printf("Read \"%s\"\n",buffer);
+	return TotalBytesRead;
 }
 
 void CloseSerialPort(HANDLE hSerial)
